@@ -1,18 +1,13 @@
 package main
 
 import (
+	"Poehali/orm"
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"strconv"
 )
 
 //requestBody
-
-type Tasks struct {
-	Message string `json:"task"`
-	IsDone  bool   `json:"is_done"`
-	ID      int    `json:"id"`
-}
 
 type Response struct {
 	Status  string `json:"status"`
@@ -23,7 +18,7 @@ type Response struct {
 
 // Возвращает данные клиенту
 func GetHandler(c echo.Context) error {
-	var task []Tasks
+	var task []orm.Task
 	if err := DB.Find(&task).Error; err != nil {
 		return c.JSON(http.StatusBadRequest, Response{
 			Status:  "error",
@@ -35,7 +30,7 @@ func GetHandler(c echo.Context) error {
 
 // Принимает данные от клиента
 func PostHandler(c echo.Context) error {
-	var task Tasks
+	var task orm.Task
 	if err := c.Bind(&task); err != nil {
 		return c.JSON(http.StatusBadRequest, Response{
 			Status:  "Error",
@@ -48,10 +43,7 @@ func PostHandler(c echo.Context) error {
 			Message: "Could not add the message",
 		})
 	}
-	return c.JSON(http.StatusOK, Response{
-		Status:  "Success",
-		Message: "Message was successfully created",
-	})
+	return c.JSON(http.StatusOK, task)
 }
 
 // Обновляет данные по ID
@@ -65,25 +57,31 @@ func PatchHandler(c echo.Context) error {
 		})
 	}
 
-	var updatedMessage Tasks
+	var task orm.Task
+	var updatedMessage orm.Task
 	if err := c.Bind(&updatedMessage); err != nil {
 		return c.JSON(http.StatusBadRequest, Response{
 			Status:  "Error",
 			Message: "Could not update the message",
 		})
 	}
-
-	if err := DB.Model(&Tasks{}).Where("id = ?", id).Update("task", updatedMessage.Message).Error; err != nil {
+	// Обновляем задачу в базе данных
+	if err := DB.Model(&orm.Task{}).Where("id = ?", id).Update("task", updatedMessage.Message).Error; err != nil {
 		return c.JSON(http.StatusBadRequest, Response{
 			Status:  "Error",
 			Message: "Could not update the message",
 		})
 	}
 
-	return c.JSON(http.StatusOK, Response{
-		Status:  "Success",
-		Message: "Message was updated",
-	})
+	// Получаем обновленную задачу из базы данных
+	if err := DB.First(&task, id).Error; err != nil {
+		return c.JSON(http.StatusBadRequest, Response{
+			Status:  "Error",
+			Message: "Could not find the updated task",
+		})
+	}
+	// Возвращаем обновленную задачу
+	return c.JSON(http.StatusOK, task)
 }
 
 // Удаляет данные по ID
@@ -97,23 +95,21 @@ func DeleteHandler(c echo.Context) error {
 		})
 	}
 
-	if err := DB.Delete(&Tasks{}, id).Error; err != nil {
+	if err := DB.Delete(&orm.Task{}, id).Error; err != nil {
 		return c.JSON(http.StatusBadRequest, Response{
 			Status:  "Error",
 			Message: "Could not delete the message",
 		})
 	}
-	return c.JSON(http.StatusOK, Response{
-		Status:  "Success",
-		Message: "Message was deleted",
-	})
+	return c.NoContent(http.StatusNoContent)
 }
 
 func main() {
+
 	//Вызываем InitDB() из файла db.go
 	initDB()
 	//Автоматическая миграция модели Message
-	DB.AutoMigrate(&Tasks{})
+	DB.AutoMigrate(&orm.Task{})
 
 	e := echo.New()
 
