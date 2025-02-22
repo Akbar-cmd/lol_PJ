@@ -23,3 +23,11 @@ func (s *TaskService) UpdateTaskByID(id uint, task Task) (Task, error) {
 func (s *TaskService) DeleteTaskByID(id uint) error {
 	return s.repo.DeleteTaskByID(id)
 }
+
+func (s *TaskService) PostTask(user_id uint, task string) (Task, error) {
+	tasks := Task{
+		UserID: user_id,
+		Task:   task,
+	}
+	return s.repo.PostTask(tasks)
+}

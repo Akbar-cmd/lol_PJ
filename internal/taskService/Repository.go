@@ -15,6 +15,7 @@ type TaskRepository interface {
 	UpdateTaskByID(id uint, task Task) (Task, error)
 	//DeleteTaskByID - Передаем id для удаления,возвращаем только ошибку
 	DeleteTaskByID(id uint) error
+	PostTask(task Task) (Task, error)
 }
 
 type taskRepository struct {
@@ -55,4 +56,9 @@ func (r *taskRepository) UpdateTaskByID(id uint, task Task) (Task, error) {
 
 func (r *taskRepository) DeleteTaskByID(id uint) error {
 	return r.db.Delete(&Task{}, id).Error
+}
+
+func (r *taskRepository) PostTask(task Task) (Task, error) {
+	err := r.db.Create(&task).Error
+	return task, err
 }
